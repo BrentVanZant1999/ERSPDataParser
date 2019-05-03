@@ -1,0 +1,8 @@
+﻿  LocationFixer.cpp
+c:\users\bvanp\source\repos\locationfixer\locationfixer\locationfixer.cpp(137): warning C4018: '<': signed/unsigned mismatch
+  Generating code
+  186 of 633 functions (29.4%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    45 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  LocationFixer.vcxproj -> C:\Users\bvanp\source\repos\LocationFixer\Release\LocationFixer.exe
