@@ -29,7 +29,8 @@ int CUT_LENGTH = 2;
 int CUT_LOCATION_MN_INIT = 3; 
 int HOURS_IN_DAY = 24; 
 double earthRadiusKm = 6371.0;
-
+double LAT_SUPERCOMPUTER_SENSOR = 32.88432; 
+double LONG_SUPERCOMPUTER_SENSOR = -117.23977;
 //time editing constants
 int CONVERSION_INCREMENT = 1020;
 int MINS_IN_DAY = 1440;
@@ -196,7 +197,7 @@ int main() {
 
 		std::ofstream outputFile;
 		outputFile.open("UPDATED_" + currentFileName + ".csv");
-		outputFile << "time" << "," << "latitude" << "," << "longitude" << "," << "isDataPoint" << "," << "distanceFromSensor(M)" << endl;
+		outputFile << "time" << "," << "latitude" << "," << "longitude" << "," << "isDataPoint" << "," << "within15(M)"  << "," << "distanceFromSensor(M)" << "," << "distanceFromSupercomputerSensor(M)" << endl;
 		string lastLatString = "";
 		string lastLongString = "";
 		bool hasLast = false;
@@ -227,12 +228,23 @@ int main() {
 			}
 			string newLongVal = "NULL";
 			string newLatVal = "NULL";
-			double kmDist;
+			double kmDistToStationarySensor;
+			double kmDistToUCSDSensor;
+			bool is15M = false; 
 			if (dataPointMap.find(z)->second == false) {
 				if (hasLast) {
-					kmDist = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
-					kmDist = kmDist * 1000;
-					outputFile << display << "," << lastLatString << "," << lastLongString << "," << "FALSE" << "," << setprecision(8) << kmDist << endl;
+					kmDistToStationarySensor = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
+					kmDistToStationarySensor = kmDistToStationarySensor * 1000;
+					kmDistToUCSDSensor = distanceEarth(LAT_SUPERCOMPUTER_SENSOR, LONG_SUPERCOMPUTER_SENSOR, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
+					kmDistToUCSDSensor = kmDistToUCSDSensor * 1000;
+					if (kmDistToStationarySensor < 15)
+					{
+						is15M = true; 
+					}
+					else {
+						is15M = false;
+					}
+					outputFile << display << "," << lastLatString << "," << lastLongString << "," << "FALSE" << ","  << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << endl;
 				}
 				else {
 					outputFile << display << "," << newLatVal << "," << newLongVal << "," << "FALSE" << endl;
@@ -243,9 +255,18 @@ int main() {
 				lastValIndex = z;
 				lastLatString = latMap.find(z)->second;
 				lastLongString = longMap.find(z)->second;
-				kmDist = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(z)->second, longValueMap.find(z)->second);
-				kmDist = kmDist * 1000;
-				outputFile << display << "," << lastLatString << "," << lastLongString << "," << "TRUE" << "," << setprecision(8) << kmDist << endl;
+				kmDistToStationarySensor = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(z)->second, longValueMap.find(z)->second);
+				kmDistToStationarySensor = kmDistToStationarySensor * 1000;
+				kmDistToUCSDSensor = distanceEarth(LAT_SUPERCOMPUTER_SENSOR, LONG_SUPERCOMPUTER_SENSOR, latValueMap.find(z)->second, longValueMap.find(z)->second);
+				kmDistToUCSDSensor = kmDistToUCSDSensor * 1000;
+				if (kmDistToStationarySensor < 15)
+				{
+					is15M = true;
+				}
+				else {
+					is15M = false;
+				}
+				outputFile << display << "," << lastLatString << "," << lastLongString << "," << "TRUE" << "," << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << endl;
 			}
 
 		}
