@@ -17,8 +17,8 @@
 using namespace std;
 
 //file constants
-const int NUM_FILES = 7; 
-string FILENAMES[7] = {  "2019-03-06_io", "2019-03-11_io", "2019-03-22_io", "2019-03-30_io", "2019-04-01_io", "2019-04-08_io", "2019-04-09_io" };
+const int NUM_FILES = 8; 
+string FILENAMES[8] = {  "2019-03-06_io","2019-03-10_io", "2019-03-11_io", "2019-03-22_io", "2019-03-30_io", "2019-04-01_io", "2019-04-08_io", "2019-04-09_io" };
 //splicing data constants
 int CUT_LOCATION = 11;
 int CUT_LOCATION_HR_INIT = 0; 
@@ -160,7 +160,7 @@ int main() {
 		int endTime = 0;
 		//handle data string conversion and organizing
 		for (int i = 0; i < collectedZuluTimes.size(); i++) {
-			cout << "I VAL:" << i << endl;
+
 			//updating zulu time string 
 			cout << collectedZuluTimes[i] << endl;
 			string toEdit = collectedZuluTimes[i];
@@ -175,9 +175,8 @@ int main() {
 			int currHrVal = stoi(currHr, &sz);
 			int currMinVal = stoi(currMin, &sz);
 			int minVal = (currMinVal + (60 * currHrVal));
-			cout << "ZULU TIME:" << minVal << endl;
+		
 			int newMinVal = (minVal + CONVERSION_INCREMENT) % MINS_IN_DAY;
-			cout << "PDT TIME:" << newMinVal << endl;
 
 			if (i == 0) {
 				startTime = newMinVal;
@@ -211,11 +210,9 @@ int main() {
 				longValueMap.insert(pair<int, double>(n, long_number));
 				if (hasFoundFirst == false) {
 					hasFoundFirst = true;
-					stationaryLat = lat_number;
+					stationaryLat = lat_number; 
 					stationaryLong = long_number;
 				}
-
-
 			}
 		}
 
@@ -228,10 +225,59 @@ int main() {
 		string compLatVal;
 		bool hasLast = false;
 		int lastValIndex = 0;
+
+		//map<int, double> longValueMap;
+		//map<int, double> latValueMap;
+		//double conversion
+		double firstLatVal = latValueMap.find(startTime)->second;
+		double firstLonVal = longValueMap.find(startTime)->second;
+		int valsMissing = 0;
+
+		for (int v = startTime; v <= endTime; v++) {
+			if (dataPointMap.find(v)->second == false) {
+				valsMissing++;
+			}
+			else {
+				if (valsMissing > 0) {
+					cout << "missing num:"<< valsMissing <<  endl;
+					double secondLatVal = latValueMap.find(v)->second;
+					double secondLonVal = longValueMap.find(v)->second;
+					cout << "lat1:" << firstLatVal << endl;
+					cout << "lat1:" << secondLatVal << endl;
+
+					double difLat = secondLatVal - firstLatVal;
+					cout << "dif:" << difLat << endl;
+					double difLon = secondLonVal - firstLonVal;
+					double latInc = difLat / (valsMissing + 1);
+					cout << "inc:" << latInc << endl;
+					double lonInc = difLon / (valsMissing + 1);
+					for (int q = 0; q < valsMissing; q++) {
+						int newCur = v - valsMissing + q; 
+						double newLonVal = firstLonVal + (lonInc*(q+1));
+						double newLatVal = firstLatVal + (latInc*(q + 1));
+						cout << "new:" << newLatVal << endl;
+						latValueMap.insert(pair<int, double>(newCur, newLonVal));
+						longValueMap.insert(pair<int, double>(newCur, newLatVal));
+						longMap.insert(pair<int, string>(newCur, to_string(newLonVal)));
+						latMap.insert(pair<int, string>(newCur, to_string(newLatVal)));
+					}
+				}
+				cout << "resting" << endl;
+				valsMissing = 0;
+				firstLatVal = latValueMap.find(v)->second;
+				firstLonVal = longValueMap.find(v)->second;
+				
+			}
+		}
+
+
 		for (int z = startTime; z <= endTime; z++) {
 			int hourToDisplay = z / 60;
 			string display;
 			display = currentFileName;
+			display.pop_back();
+			display.pop_back();
+			display.pop_back();
 			display.pop_back();
 			display.pop_back();
 			display.pop_back();
@@ -264,6 +310,8 @@ int main() {
 				if (hasLast) {
 					insideVal = locValueMap.find(lastValIndex)->second;
 					typeString = locTypeMap.find(lastValIndex)->second;
+					lastLatString = latMap.find(z)->second;
+					lastLongString = longMap.find(z)->second;
 					kmDistToStationarySensor = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
 					kmDistToStationarySensor = kmDistToStationarySensor * 1000;
 					kmDistToUCSDSensor = distanceEarth(LAT_SUPERCOMPUTER_SENSOR, LONG_SUPERCOMPUTER_SENSOR, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
