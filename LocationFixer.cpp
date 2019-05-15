@@ -14,15 +14,12 @@
 #define M_PI 3.14159265358979323846
 #include <cmath> 
 
-
-
 using namespace std;
 
 //file constants
-int NUM_FILES = 8; 
-string FILENAMES[8] = { "2019-03-06", "2019-03-10", "2019-03-11", "2019-03-22", "2019-03-30", "2019-04-01", "2019-04-08", "2019-04-09" };
+const int NUM_FILES = 7; 
+string FILENAMES[7] = {  "2019-03-06_io", "2019-03-11_io", "2019-03-22_io", "2019-03-30_io", "2019-04-01_io", "2019-04-08_io", "2019-04-09_io" };
 //splicing data constants
-int NUM_COLS = 3; 
 int CUT_LOCATION = 11;
 int CUT_LOCATION_HR_INIT = 0; 
 int CUT_LENGTH = 2; 
@@ -77,12 +74,14 @@ int main() {
 
 		vector<string> collectedLong;
 		vector<string> collectedLat;
-
-
+		vector<string> collectedLocation;
+		vector<string> collectedLocationType;
 		map<int, string> longMap;
 		map<int, string> latMap;
 		map<int, string> longDoubleMap;
 		map<int, string> latDoubleMap;
+		map<int, string> locValueMap;
+		map<int, string> locTypeMap;
 
 		map<int, double> longValueMap;
 		map<int, double> latValueMap;
@@ -93,7 +92,7 @@ int main() {
 
 		double stationaryLat = 0.0f;
 		double stationaryLong = 0.0f;
-
+		int colOfIo = 0; 
 
 		vector<string> collectedZuluTimes; //store zulu times
 		vector<string> collectedPDTTimes;  //hold PDT times 
@@ -123,10 +122,35 @@ int main() {
 					else if (colReadCount == 2) {
 						collectedLong.push_back(cell);  //push back longitude
 					}
+					else if (colReadCount == colOfIo-1) {
+						//parse
+						if (cell.compare("building") == 0 || cell.compare("leisure") == 0) {
+							collectedLocation.push_back("Inside");
+						}
+						else {
+							collectedLocation.push_back("Outside");
+						}
+						collectedLocationType.push_back(cell);
+						  //push back longitude
+					}
 					colReadCount++;
 				}
 			}
 			else {
+				stringstream lineStream(curLine);
+
+				//setup a string to hold individual cell data 
+				string cell;
+				int colReadCount = 0;
+				//handle getting data
+				while (getline(lineStream, cell, ','))
+				{
+					if (cell.compare("io")) {
+						colOfIo = colReadCount;
+					}
+					colReadCount++; 
+				}
+					
 				header = false;
 			}
 		}
@@ -164,7 +188,11 @@ int main() {
 			dataPointMap.insert(pair<int, bool>(newMinVal, true));
 			longMap.insert(pair<int, string>(newMinVal, collectedLong[i]));
 			latMap.insert(pair<int, string>(newMinVal, collectedLat[i]));
+			locValueMap.insert(pair<int, string>(newMinVal, collectedLocation[i]));
+			locTypeMap.insert(pair<int, string>(newMinVal, collectedLocationType[i]));
 		}
+
+		
 		bool hasFoundFirst = false;
 		for (int n = 0; n < MINS_IN_DAY; n++) {
 			auto searchData = dataPointMap.find(n);
@@ -177,11 +205,7 @@ int main() {
 				double long_number;
 				number = latMap.find(n)->second;
 				lat_number = atof(number.c_str());
-				cout << "string: " << number << endl;
-				cout << "double: " << setprecision(8) << lat_number << endl;
-
 				latValueMap.insert(pair<int, double>(n, lat_number));
-
 				number = longMap.find(n)->second;
 				long_number = atof(number.c_str());
 				longValueMap.insert(pair<int, double>(n, long_number));
@@ -197,9 +221,11 @@ int main() {
 
 		std::ofstream outputFile;
 		outputFile.open("UPDATED_" + currentFileName + ".csv");
-		outputFile << "time" << "," << "latitude" << "," << "longitude" << "," << "isDataPoint" << "," << "within15(M)"  << "," << "distanceFromSensor(M)" << "," << "distanceFromSupercomputerSensor(M)" << endl;
+		outputFile << "time" << "," << "latitude" << "," << "longitude" << "," << "isDataPoint" << "," << "within15(M)"  << "," << "distanceFromSensor(M)" << "," << "distanceFromSupercomputerSensor(M)" << "," << "insideOutsideVal" << ",locationType:" << endl;
 		string lastLatString = "";
 		string lastLongString = "";
+		string compLongVal;
+		string compLatVal;
 		bool hasLast = false;
 		int lastValIndex = 0;
 		for (int z = startTime; z <= endTime; z++) {
@@ -228,11 +254,16 @@ int main() {
 			}
 			string newLongVal = "NULL";
 			string newLatVal = "NULL";
+			string insideVal; 
+			string typeString; 
+		
 			double kmDistToStationarySensor;
 			double kmDistToUCSDSensor;
 			bool is15M = false; 
 			if (dataPointMap.find(z)->second == false) {
 				if (hasLast) {
+					insideVal = locValueMap.find(lastValIndex)->second;
+					typeString = locTypeMap.find(lastValIndex)->second;
 					kmDistToStationarySensor = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
 					kmDistToStationarySensor = kmDistToStationarySensor * 1000;
 					kmDistToUCSDSensor = distanceEarth(LAT_SUPERCOMPUTER_SENSOR, LONG_SUPERCOMPUTER_SENSOR, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
@@ -244,17 +275,16 @@ int main() {
 					else {
 						is15M = false;
 					}
-					outputFile << display << "," << lastLatString << "," << lastLongString << "," << "FALSE" << ","  << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << endl;
-				}
-				else {
-					outputFile << display << "," << newLatVal << "," << newLongVal << "," << "FALSE" << endl;
+					outputFile << display << "," << lastLatString << "," << lastLongString << "," << "FALSE" << ","  << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << "," << insideVal << "," << typeString << endl;
 				}
 			}
 			else {
 				hasLast = true;
 				lastValIndex = z;
+				insideVal = locValueMap.find(z)->second;
 				lastLatString = latMap.find(z)->second;
 				lastLongString = longMap.find(z)->second;
+				typeString = locTypeMap.find(z)->second;
 				kmDistToStationarySensor = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(z)->second, longValueMap.find(z)->second);
 				kmDistToStationarySensor = kmDistToStationarySensor * 1000;
 				kmDistToUCSDSensor = distanceEarth(LAT_SUPERCOMPUTER_SENSOR, LONG_SUPERCOMPUTER_SENSOR, latValueMap.find(z)->second, longValueMap.find(z)->second);
@@ -266,7 +296,7 @@ int main() {
 				else {
 					is15M = false;
 				}
-				outputFile << display << "," << lastLatString << "," << lastLongString << "," << "TRUE" << "," << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << endl;
+				outputFile << display << "," << lastLatString << "," << lastLongString << "," << "TRUE" << "," << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << "," << insideVal << "," << typeString << endl;
 			}
 
 		}
