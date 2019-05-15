@@ -218,7 +218,7 @@ int main() {
 
 		std::ofstream outputFile;
 		outputFile.open("UPDATED_" + currentFileName + ".csv");
-		outputFile << "time" << "," << "latitude" << "," << "longitude" << "," << "isDataPoint" << "," << "within15(M)"  << "," << "distanceFromSensor(M)" << "," << "distanceFromSupercomputerSensor(M)" << "," << "insideOutsideVal" << ",locationType:" << endl;
+		outputFile << "time" << "," << "latitude" << "," << "longitude" << "," << "isDataPoint" << "," << "within15(M)"  << "," << "distanceFromSensor(M)" << "," << "distanceFromSupercomputerSensor(M)" << "," << "insideOutsideVal" << ",locationType:" << ",speed(M/s)" << endl;
 		string lastLatString = "";
 		string lastLongString = "";
 		string compLongVal;
@@ -256,8 +256,8 @@ int main() {
 						double newLonVal = firstLonVal + (lonInc*(q+1));
 						double newLatVal = firstLatVal + (latInc*(q + 1));
 						cout << "new:" << newLatVal << endl;
-						latValueMap.insert(pair<int, double>(newCur, newLonVal));
-						longValueMap.insert(pair<int, double>(newCur, newLatVal));
+						latValueMap.insert(pair<int, double>(newCur, newLatVal));
+						longValueMap.insert(pair<int, double>(newCur, newLonVal));
 						longMap.insert(pair<int, string>(newCur, to_string(newLonVal)));
 						latMap.insert(pair<int, string>(newCur, to_string(newLatVal)));
 					}
@@ -302,7 +302,9 @@ int main() {
 			string newLatVal = "NULL";
 			string insideVal; 
 			string typeString; 
-		
+			string speedString;
+			double kmDistToStationarySensorLast;
+			double currSpeed = 0; 
 			double kmDistToStationarySensor;
 			double kmDistToUCSDSensor;
 			bool is15M = false; 
@@ -312,10 +314,12 @@ int main() {
 					typeString = locTypeMap.find(lastValIndex)->second;
 					lastLatString = latMap.find(z)->second;
 					lastLongString = longMap.find(z)->second;
-					kmDistToStationarySensor = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
+					kmDistToStationarySensor = distanceEarth(stationaryLat, stationaryLong, latValueMap.find(z)->second, longValueMap.find(z)->second);
 					kmDistToStationarySensor = kmDistToStationarySensor * 1000;
 					kmDistToUCSDSensor = distanceEarth(LAT_SUPERCOMPUTER_SENSOR, LONG_SUPERCOMPUTER_SENSOR, latValueMap.find(lastValIndex)->second, longValueMap.find(lastValIndex)->second);
 					kmDistToUCSDSensor = kmDistToUCSDSensor * 1000;
+					currSpeed = kmDistToStationarySensor - kmDistToStationarySensorLast;
+					speedString = to_string(currSpeed / 60);
 					if (kmDistToStationarySensor < 15)
 					{
 						is15M = true; 
@@ -323,7 +327,8 @@ int main() {
 					else {
 						is15M = false;
 					}
-					outputFile << display << "," << lastLatString << "," << lastLongString << "," << "FALSE" << ","  << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << "," << insideVal << "," << typeString << endl;
+					outputFile << display << "," << lastLatString << "," << lastLongString << "," << "FALSE" << ","  << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << "," << insideVal << "," << typeString << "," << speedString << endl;
+					kmDistToStationarySensorLast = kmDistToStationarySensor;
 				}
 			}
 			else {
@@ -337,6 +342,14 @@ int main() {
 				kmDistToStationarySensor = kmDistToStationarySensor * 1000;
 				kmDistToUCSDSensor = distanceEarth(LAT_SUPERCOMPUTER_SENSOR, LONG_SUPERCOMPUTER_SENSOR, latValueMap.find(z)->second, longValueMap.find(z)->second);
 				kmDistToUCSDSensor = kmDistToUCSDSensor * 1000;
+				if (z == startTime) {
+					currSpeed = 0;
+					speedString = to_string(currSpeed / 60);
+				}
+				else {
+					currSpeed = kmDistToStationarySensor - kmDistToStationarySensorLast;
+					speedString = to_string(currSpeed / 60);
+				}
 				if (kmDistToStationarySensor < 15)
 				{
 					is15M = true;
@@ -344,7 +357,8 @@ int main() {
 				else {
 					is15M = false;
 				}
-				outputFile << display << "," << lastLatString << "," << lastLongString << "," << "TRUE" << "," << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << "," << insideVal << "," << typeString << endl;
+				outputFile << display << "," << lastLatString << "," << lastLongString << "," << "TRUE" << "," << is15M << "," << setprecision(8) << kmDistToStationarySensor << "," << setprecision(8) << kmDistToUCSDSensor << "," << insideVal << "," << typeString  << "," << speedString << endl;
+				kmDistToStationarySensorLast = kmDistToStationarySensor;
 			}
 
 		}
